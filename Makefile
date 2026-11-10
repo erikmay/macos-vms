@@ -39,7 +39,7 @@ auth-codex: ## Codex device login in VM N (you approve a code in the browser)
 status: ## Show VMs, T3 reachability, tool versions and logins
 	$(S)/status.sh
 
-view: ## Open Screen Sharing for VM N (watch the agent, take over)
+view: ## Open Screen Sharing for all VMs side by side, or for VM N only
 	$(S)/view.sh $(N)
 
 pair: ## Pair the T3 Code app with VM N again (sessions expire)

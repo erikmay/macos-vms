@@ -31,8 +31,8 @@ one in a few minutes.
   [agent-browser](https://github.com/vercel-labs/agent-browser) attached to it.
 - **Computer use.** [agent-desktop](https://github.com/vercel-labs/agent-desktop) drives
   macOS apps through the accessibility tree. The privacy permissions are granted by script.
-- **You can watch.** `make view N=1` opens Screen Sharing into the VM. You see the agent's
-  Chrome and desktop and can take over.
+- **You can watch.** `make view` opens every VM in macOS Screen Sharing, side by side.
+  You see each agent's Chrome and desktop and can take over.
 - **Network isolation.** With [Softnet](https://github.com/cirruslabs/softnet), a VM
   reaches the internet but not your LAN, your VPN or the other VM.
 - **It stays up.** launchd starts the VMs, the T3 servers, Chrome and the tunnel again
@@ -94,7 +94,7 @@ Run `make` to see this list. `N` is the VM number, 1 or 2.
 | `make token` | Store the token from `claude setup-token` in your Keychain |
 | `make auth N=1` | Log in Claude Code and Codex in the VM (`auth-claude`, `auth-codex` do one each) |
 | `make status` | VMs, T3 reachability, tool versions, logins |
-| `make view N=1` | Screen Sharing into the VM (login `admin` / `admin`) |
+| `make view` | Screen Sharing for all VMs, windows tiled side by side. `make view N=1` opens one VM |
 | `make pair N=1` | Pair the app again. T3 sessions expire after 30 days |
 | `make tunnel` | Reinstall the SSH tunnel on your Mac |
 | `make update N=1` | Update tools and settings in the VM in place. Logins and data stay |
