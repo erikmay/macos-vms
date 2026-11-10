@@ -13,38 +13,45 @@ set -euo pipefail
 
 echo "--> Google Chrome"
 [ -d "/Applications/Google Chrome.app" ] || brew install --cask google-chrome >/dev/null
+# Without this, the first start waits in the "downloaded from the Internet" dialog.
+xattr -dr com.apple.quarantine "/Applications/Google Chrome.app" 2>/dev/null || true
 
 echo "--> agent-browser, agent-desktop"
 npm install -g --allow-scripts=agent-browser,agent-desktop agent-browser@latest agent-desktop@latest >/dev/null
 
 echo "--> Shared Chrome (CDP on 127.0.0.1:9222)"
+# The job does not run Chrome itself. It runs a check, at login and every 30 seconds,
+# that starts Chrome only if no Chrome with the agent profile runs. A job that runs the
+# Chrome binary with KeepAlive breaks as soon as Chrome runs outside the job (after a
+# Chrome update, or opened by hand): every new launch then exits at once and opens one
+# more window in the running Chrome, forever.
 label=macos-vms.agent-chrome
-mkdir -p ~/Library/LaunchAgents
+mkdir -p ~/Library/LaunchAgents ~/.config/agent-chrome
+cat > ~/.config/agent-chrome/start.sh <<'SH'
+#!/bin/zsh
+profile="$HOME/.agent-chrome"
+pgrep -f -- "--user-data-dir=$profile" >/dev/null && exit 0
+exec open -n -a "Google Chrome" --args --remote-debugging-port=9222 \
+  --remote-debugging-address=127.0.0.1 "--user-data-dir=$profile" \
+  --no-first-run --no-default-browser-check
+SH
+chmod 755 ~/.config/agent-chrome/start.sh
 plist=~/Library/LaunchAgents/$label.plist
 new="$(cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>$label</string>
-  <key>ProgramArguments</key><array>
-    <string>/Applications/Google Chrome.app/Contents/MacOS/Google Chrome</string>
-    <string>--remote-debugging-port=9222</string>
-    <string>--remote-debugging-address=127.0.0.1</string>
-    <string>--user-data-dir=$HOME/.agent-chrome</string>
-    <string>--no-first-run</string>
-    <string>--no-default-browser-check</string>
-  </array>
+  <key>ProgramArguments</key><array><string>$HOME/.config/agent-chrome/start.sh</string></array>
   <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
+  <key>StartInterval</key><integer>30</integer>
   <key>LimitLoadToSessionType</key><string>Aqua</string>
 </dict></plist>
 PLIST
 )"
-# Reload Chrome only if the job changed or is not loaded.
 if [ "$new" != "$(cat "$plist" 2>/dev/null)" ] || ! launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
   print -r -- "$new" > "$plist"
   launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
-  # bootout returns before Chrome has quit; bootstrap fails until it has.
   for _ in {1..30}; do launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 || break; sleep 1; done
   launchctl bootstrap "gui/$(id -u)" "$plist"
 fi

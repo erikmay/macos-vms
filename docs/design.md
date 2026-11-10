@@ -26,7 +26,7 @@ Everything that must survive a restart is a LaunchAgent. All labels start with `
 | client | `macos-vms.tunnel` | `ssh -N -L …` to the host |
 | guest | `com.t3tools.t3code.service` | The T3 server. Installed by `t3 up`, not by this repo |
 | guest | `macos-vms.agent-env` | Exports the Claude token to launchd at login |
-| guest | `macos-vms.agent-chrome` | The shared Chrome |
+| guest | `macos-vms.agent-chrome` | Starts the shared Chrome if it does not run (at login, then every 30 s) |
 
 `scripts/launchd.sh` installs a job only when its plist changed. `make up` and
 `make update` are therefore safe to run again: they do not restart a VM that is already
@@ -101,3 +101,16 @@ mechanism provisions the image and manages the VMs later.
 
 Tart is installed from its GitHub release at a pinned version, in `~/opt/tart` with a
 link in `~/bin`. The scripts need a known path that also works in launchd jobs.
+
+## The shared Chrome
+
+The LaunchAgent does not run the Chrome binary with `KeepAlive`. That version broke as
+soon as a Chrome with the same profile ran outside the job (after a Chrome update, or
+opened by hand): each new launch handed over to the running Chrome, which opened one
+more window, and exited, so launchd started it again. The VMs collected hundreds of
+windows. Now the job runs `~/.config/agent-chrome/start.sh` every 30 seconds, and the
+script starts Chrome only when no Chrome with the agent profile runs.
+
+`desktop.sh` also removes the quarantine flag from Chrome. Without that, the first
+start waits in the "downloaded from the Internet" dialog, and the debugging port never
+opens.
