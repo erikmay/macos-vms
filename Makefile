@@ -10,7 +10,7 @@ S := ./scripts
 
 .DEFAULT_GOAL := help
 .PHONY: help host image up auth token auth-claude auth-codex status view pair tunnel \
-        update start stop reset delete forget lint
+        update start stop reset delete forget bench lint
 
 help: ## Show this list
 	@awk -F':.*## ' '/^##@/ {printf "\n%s\n", substr($$0, 5)} /^[a-z-]+:.*## / {printf "  make %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -74,6 +74,9 @@ delete: ## Delete VM N (its logins stay saved for the next VM N; see forget)
 
 forget: ## Delete the saved logins of VM slot N
 	$(S)/vm-state.sh forget $(N)
+
+bench: ## Benchmark `make reset` for VM N (RUNS=3); report in docs/benchmarks/
+	$(S)/bench.sh $(N) $(or $(RUNS),3) docs/benchmarks/$$(date -u +%Y-%m-%d)-reset.md
 
 lint: ## Check the scripts (shellcheck, zsh -n)
 	shellcheck -x $(S)/*.sh

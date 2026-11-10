@@ -102,6 +102,7 @@ Run `make` to see this list. `N` is the VM number, 1 or 2.
 | `make reset N=1` | Delete the VM and create a clean one. The logins are kept (see below) |
 | `make delete N=1` | Delete the VM. Its logins stay saved for the next VM with this number |
 | `make forget N=1` | Delete the saved logins of VM slot N |
+| `make bench N=2` | Time three resets of VM N and write a report to `docs/benchmarks/` |
 
 ## Configuration
 
@@ -162,8 +163,9 @@ logins.
 
 ### How long a reset takes
 
-`TIMING=1 make reset N=2` prints the time of each step. On a MacBook Pro M1 (16 GB)
-host, a reset takes about 70 seconds:
+`TIMING=1 make reset N=2` prints the time of each step, and `make bench N=2` runs three
+resets and writes a report to [docs/benchmarks](docs/benchmarks). On a MacBook Pro M1
+(16 GB) host, a reset takes about 70 seconds (median of three runs: 69 s):
 
 | Step | Seconds |
 | --- | --- |
