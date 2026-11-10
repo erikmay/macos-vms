@@ -33,7 +33,7 @@ profile="$HOME/.agent-chrome"
 pgrep -f -- "--user-data-dir=$profile" >/dev/null && exit 0
 exec open -n -a "Google Chrome" --args --remote-debugging-port=9222 \
   --remote-debugging-address=127.0.0.1 "--user-data-dir=$profile" \
-  --no-first-run --no-default-browser-check
+  --no-first-run --no-default-browser-check --hide-crash-restore-bubble
 SH
 chmod 755 ~/.config/agent-chrome/start.sh
 plist=~/Library/LaunchAgents/$label.plist
