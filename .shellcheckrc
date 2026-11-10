@@ -1,0 +1,5 @@
+# The scripts build command lines that run on another machine (ssh, tart exec),
+# so "expands on the client side" and "does not expand in single quotes" are intended.
+disable=SC2029,SC2016
+# lib.sh and config.env are sourced through a path computed at run time.
+disable=SC1091
