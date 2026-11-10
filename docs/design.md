@@ -114,3 +114,14 @@ script starts Chrome only when no Chrome with the agent profile runs.
 `desktop.sh` also removes the quarantine flag from Chrome. Without that, the first
 start waits in the "downloaded from the Internet" dialog, and the debugging port never
 opens.
+
+## Reset with logins
+
+`scripts/vm-state.sh` and `guest/state.sh` carry a VM slot's login state across
+`make reset`. T3 checks an app's bearer token against its signing key
+(`~/.t3/userdata/secrets/`) **and** against a row in the `auth_sessions` table of
+`statev2.sqlite`. The table lives in the same database as the threads, so the reset
+saves only the rows of the app's sessions (desktop clients, not revoked, not expired)
+as SQL and loads them after the new T3 server has started. With the environment ID,
+the keys and those rows, the app treats the new VM as the old one and reconnects
+without a pairing dialog.

@@ -22,7 +22,13 @@ if [ -f "$ROOT/config.local.env" ]; then . "$ROOT/config.local.env"; fi
 # shellcheck disable=SC2016  # expanded by the host's shell, not here
 TART='"$HOME/bin/tart"'      # installed by `make host`
 
-log() { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
+# TIMING=1 prefixes each log line with the seconds since the first script started.
+if [ -n "${TIMING:-}" ]; then export TIMING_T0="${TIMING_T0:-$(date +%s)}"; fi
+log() {
+  local t=""
+  if [ -n "${TIMING:-}" ]; then t="[$(( $(date +%s) - TIMING_T0 ))s] "; fi
+  printf '\033[1;34m==>\033[0m %s%s\n' "$t" "$*" >&2
+}
 die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ -n "${VM_HOST:-}" ] || die "VM_HOST is not set. Run: echo 'VM_HOST=<ssh host or local>' > $ROOT/config.local.env"

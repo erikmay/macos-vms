@@ -6,7 +6,7 @@ Two macOS VMs run on an Apple Silicon Mac. Each VM is a remote T3 environment wi
 Claude Code and Codex logged in, a shared Chrome for browser use, and full computer
 use. You give an agent a whole Mac to work on, with full access, and nothing of it
 touches your own machine. When a VM is in a bad state, `make reset` gives you a clean
-one in a few minutes.
+one in about a minute, still logged in to Claude Code, Codex and the T3 Code app.
 
 ```
  your Mac (client)                 host Mac (Apple Silicon)                VM  mac-vm1, mac-vm2
@@ -99,8 +99,9 @@ Run `make` to see this list. `N` is the VM number, 1 or 2.
 | `make tunnel` | Reinstall the SSH tunnel on your Mac |
 | `make update N=1` | Update tools and settings in the VM in place. Logins and data stay |
 | `make stop N=1`, `make start N=1` | Stop the VM until you start it again |
-| `make reset N=1` | Delete the VM and create a clean one. Run `make auth` again afterwards |
-| `make delete N=1` | Delete the VM |
+| `make reset N=1` | Delete the VM and create a clean one. The logins are kept (see below) |
+| `make delete N=1` | Delete the VM. Its logins stay saved for the next VM with this number |
+| `make forget N=1` | Delete the saved logins of VM slot N |
 
 ## Configuration
 
@@ -143,6 +144,37 @@ one-time code, and you approve the code in your browser. Every VM has its own lo
 not copy a Codex `auth.json` between machines: its refresh token works only once, so the
 first machine that refreshes it logs the others out. See the
 [Codex authentication docs](https://developers.openai.com/codex/auth).
+
+### Logins survive a reset
+
+A VM number is a slot. Before `make delete` or `make reset` deletes a VM, it saves the
+slot's login state in a Keychain item on your Mac (`macos-vms-state-mac-vmN`), and
+`make up` puts it into the new VM:
+
+- the Codex login (`~/.codex/auth.json`). It moves from the old VM to its replacement,
+  never to a second running machine, so its single-use refresh token stays valid.
+- the T3 server identity (environment ID and keys), so the app keeps one entry per slot
+- the app's session, so the app reconnects by itself and needs no new pairing
+
+Everything else starts clean: threads, projects, files and the Chrome profile.
+`make forget N=…` deletes the saved state; the next VM in that slot then starts without
+logins.
+
+### How long a reset takes
+
+`TIMING=1 make reset N=2` prints the time of each step. On a MacBook Pro M1 (16 GB)
+host, a reset takes about 70 seconds:
+
+| Step | Seconds |
+| --- | --- |
+| Save the logins, delete the old VM | 5–7 |
+| Clone the golden image (an APFS clone), launchd jobs | 2 |
+| macOS boots until the Tart guest agent answers | 32–38 |
+| Restore the logins, start T3, privacy permissions, app session | 10–12 |
+| Tunnel, pairing check | 3–5 |
+| Claude token and a test prompt, Codex check | 9 |
+
+The app reconnects to the new VM within about a minute.
 
 ## Browser and computer use
 

@@ -1,11 +1,16 @@
 # macos-vms: macOS VMs for coding agents, driven from the T3 Code desktop app.
 # Run from this Mac (the client). N is the VM number: 1 or 2.
 SHELL := /bin/bash
+# One start time for every script of one make run (used with TIMING=1).
+ifndef TIMING_T0
+TIMING_T0 := $(shell date +%s)
+endif
+export TIMING_T0
 S := ./scripts
 
 .DEFAULT_GOAL := help
 .PHONY: help host image up auth token auth-claude auth-codex status view pair tunnel \
-        update start stop reset delete lint
+        update start stop reset delete forget lint
 
 help: ## Show this list
 	@awk -F':.*## ' '/^##@/ {printf "\n%s\n", substr($$0, 5)} /^[a-z-]+:.*## / {printf "  make %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -17,12 +22,13 @@ host: ## Prepare the host: Tart, Softnet, socat
 image: ## Build the golden image (agent CLIs, settings, Chrome, browser and computer use)
 	$(S)/image-build.sh
 
-up: ## Create VM N, start T3 in it and pair the T3 Code app with it
+up: ## Create VM N, restore its saved logins, start T3 in it and pair the T3 Code app with it
 	$(S)/vm-create.sh $(N)
+	$(S)/vm-state.sh restore $(N)
 	$(S)/vm-t3.sh $(N)
+	$(S)/vm-state.sh sessions $(N)
 	$(S)/tunnel.sh
-	$(S)/pair.sh $(N)
-	@echo "Next: make auth N=$(N)"
+	$(S)/pair.sh --if-needed $(N)
 
 token: ## Store the token from `claude setup-token` in the Keychain (once)
 	$(S)/token.sh
@@ -58,13 +64,16 @@ start: ## Start VM N
 stop: ## Stop VM N until `make start` (frees a VM slot)
 	$(S)/vm-power.sh stop $(N)
 
-reset: ## Delete VM N and create a clean one (logins are lost)
+reset: ## Delete VM N and create a clean one; the logins are kept
 	$(S)/vm-delete.sh $(N)
-	$(MAKE) --no-print-directory up N=$(N)
+	$(MAKE) --no-print-directory up auth N=$(N)
 
-delete: ## Delete VM N
+delete: ## Delete VM N (its logins stay saved for the next VM N; see forget)
 	$(S)/vm-delete.sh $(N)
 	$(S)/tunnel.sh
+
+forget: ## Delete the saved logins of VM slot N
+	$(S)/vm-state.sh forget $(N)
 
 lint: ## Check the scripts (shellcheck, zsh -n)
 	shellcheck -x $(S)/*.sh
