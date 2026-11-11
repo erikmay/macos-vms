@@ -98,7 +98,7 @@ Run `make` to see this list. `N` is the VM number, 1 or 2.
 | `make view` | All VMs side by side in the browser (voxl). `make view N=1` shows one VM |
 | `make vnc` | The same in macOS Screen Sharing (login `admin` / `admin`), as a fallback |
 | `make pair N=1` | Pair the app again. T3 sessions expire after 30 days |
-| `make tunnel` | Reinstall the SSH tunnel on your Mac |
+| `make tunnel` | Reinstall and restart the SSH tunnel on your Mac (also after you change networks) |
 | `make update N=1` | Update tools and settings in the VM in place. Logins and data stay |
 | `make stop N=1`, `make start N=1` | Stop the VM until you start it again |
 | `make reset N=1` | Delete the VM and create a clean one. The logins are kept (see below) |
@@ -255,6 +255,23 @@ Read this before you give an agent full access.
 - **Softnet runs as SUID root** on the host. That is how Cirrus Labs designed it.
 - Do not add `--net-softnet-expose` to `TART_RUN_FLAGS`. It also opens the port on the
   host's LAN address.
+
+### Host in the same local network
+
+The tunnel follows your SSH configuration for `VM_HOST`. If the host is in your local
+network but you also reach it through a VPN, make SSH prefer the direct path when it is
+available, or every byte of the screen stream and T3 makes a trip through the VPN server.
+For example, in `~/.ssh/config` before the host's normal entry:
+
+```
+Match originalhost my-mac-mini exec "nc -z -G 1 192.168.1.20 22 >/dev/null 2>&1"
+	HostName 192.168.1.20
+	HostKeyAlias <the address in known_hosts>
+```
+
+In one test setup, this changed SSH throughput from 4 MB/s (through a VPN hub) to 49 MB/s
+and the round trip from about 50 ms to about 5 ms. Run `make tunnel` after you change
+networks, so the tunnel takes the new path.
 
 ## Troubleshooting
 

@@ -47,6 +47,10 @@ launchd_install client "$label" <<PLIST
 </dict></plist>
 PLIST
 
+# Restart it even when the plist is unchanged: SSH picks its route at connect time, so a
+# restart moves the tunnel to a better path (for example from a VPN to the local network).
+launchctl kickstart -k "gui/$(id -u)/$label"
+
 # Wait until the first forward answers.
 first="$(t3_local_port "$(vm_list | head -1 | sed "s/^$VM_PREFIX//")")"
 for _ in $(seq 1 15); do
