@@ -201,7 +201,10 @@ desktop to macOS:
 screen as H.264 over one WebSocket; the browser decodes it with WebCodecs. Each VM makes
 its own random password at its first start (`~/.config/voxl/password`). `make view` reads
 the passwords and writes a page with one pane per VM to
-`~/Library/Caches/macos-vms/view.html` (mode 600), then opens it. Each pane has a button
+`~/Library/Caches/macos-vms/view.html` (mode 600). A small LaunchAgent on your Mac
+(`macos-vms.view`) serves that page on `http://127.0.0.1:16900/`, because Chrome's Local
+Network Access protection blocks a `file://` page from loading the streams from
+`127.0.0.1`, and `make view` opens it. Each pane has a button
 to maximize it; a hidden pane disconnects, so voxl encodes nothing for it.
 
 voxl is built from crates.io inside the image (`cargo install voxl-server`, about two

@@ -4,7 +4,10 @@
 #   view.sh      all VMs
 #   view.sh N    VM N only
 # The page embeds each VM's voxl password, so it is written to this Mac's user cache
-# (mode 600), not to the repository. `make vnc` is the Screen Sharing fallback.
+# (mode 600), not to the repository. A LaunchAgent serves it on 127.0.0.1:<VOXL_LOCAL_PORT_BASE>
+# (scripts/view-server.py): Chrome blocks a file:// page from loading the streams on
+# 127.0.0.1 (Local Network Access), but allows a page that is on loopback itself.
+# `make vnc` is the Screen Sharing fallback.
 . "$(dirname "$0")/lib.sh"
 
 if [ -n "${1:-}" ]; then
@@ -89,5 +92,28 @@ layout();
 </html>
 HTML
 
-log "Opening the screens of: ${vms//$'\n'/, }"
-open "$page"
+# Install or update the page server (client LaunchAgent).
+server_dir="$HOME/Library/Application Support/macos-vms"
+mkdir -p "$server_dir"
+changed=""
+cmp -s "$ROOT/scripts/view-server.py" "$server_dir/view-server.py" || { cp "$ROOT/scripts/view-server.py" "$server_dir/view-server.py"; changed=1; }
+launchd_install client "$LAUNCHD_PREFIX.view" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$LAUNCHD_PREFIX.view</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/python3</string><string>-I</string>
+    <string>$server_dir/view-server.py</string>
+    <string>$VOXL_LOCAL_PORT_BASE</string><string>$page</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+PLIST
+if [ -n "$changed" ]; then launchctl kickstart -k "gui/$(id -u)/$LAUNCHD_PREFIX.view"; fi
+url="http://127.0.0.1:$VOXL_LOCAL_PORT_BASE/"
+for _ in $(seq 1 20); do curl -fsS -o /dev/null "$url" 2>/dev/null && break; sleep 0.5; done
+
+log "Opening the screens of: ${vms//$'\n'/, } ($url)"
+open "$url"

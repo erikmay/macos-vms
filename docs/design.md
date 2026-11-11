@@ -24,6 +24,7 @@ Everything that must survive a restart is a LaunchAgent. All labels start with `
 | host | `macos-vms.vm.<vm>` | `tart run` for the VM. `KeepAlive`, so a VM that stops is started again |
 | host | `macos-vms.fwd-t3.<vm>`, `macos-vms.fwd-voxl.<vm>`, `macos-vms.fwd-vnc.<vm>` | socat forwarders on the host's loopback |
 | client | `macos-vms.tunnel` | `ssh -N -L …` to the host |
+| client | `macos-vms.view` | Serves the `make view` page on `127.0.0.1:16900` (only for its own host name) |
 | guest | `com.t3tools.t3code.service` | The T3 server. Installed by `t3 up`, not by this repo |
 | guest | `macos-vms.agent-env` | Exports the Claude token to launchd at login |
 | guest | `macos-vms.agent-chrome` | Starts the shared Chrome if it does not run (at login, then every 30 s) |
