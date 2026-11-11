@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Keep an SSH tunnel from this Mac to the host open (LaunchAgent). For every VM N it
-# forwards 127.0.0.1:1377N (T3) and 127.0.0.1:1590N (Screen Sharing) to the same
+# forwards 127.0.0.1:1377N (T3), :1690N (voxl) and :1590N (Screen Sharing) to the same
 # ports on the host's loopback, where the forwarders of vm-create.sh listen.
 # Run it again after you add or delete a VM.
 . "$(dirname "$0")/lib.sh"
@@ -15,10 +15,10 @@ fi
 forwards=""
 for vm in $(vm_list); do
   n="${vm#"$VM_PREFIX"}"
-  for port in "$(t3_local_port "$n")" "$(vnc_local_port "$n")"; do
+  for port in "$(t3_local_port "$n")" "$(voxl_local_port "$n")" "$(vnc_local_port "$n")"; do
     forwards="$forwards<string>-L</string><string>127.0.0.1:$port:127.0.0.1:$port</string>"
   done
-  log "$vm: T3 on 127.0.0.1:$(t3_local_port "$n"), Screen Sharing on 127.0.0.1:$(vnc_local_port "$n")"
+  log "$vm: T3 on 127.0.0.1:$(t3_local_port "$n"), voxl on :$(voxl_local_port "$n"), Screen Sharing on :$(vnc_local_port "$n")"
 done
 if [ -z "$forwards" ]; then
   launchd_remove client "$label"

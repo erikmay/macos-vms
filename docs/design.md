@@ -22,11 +22,13 @@ Everything that must survive a restart is a LaunchAgent. All labels start with `
 | Where | Label | Job |
 | --- | --- | --- |
 | host | `macos-vms.vm.<vm>` | `tart run` for the VM. `KeepAlive`, so a VM that stops is started again |
-| host | `macos-vms.fwd-t3.<vm>`, `macos-vms.fwd-vnc.<vm>` | socat forwarders on the host's loopback |
+| host | `macos-vms.fwd-t3.<vm>`, `macos-vms.fwd-voxl.<vm>`, `macos-vms.fwd-vnc.<vm>` | socat forwarders on the host's loopback |
 | client | `macos-vms.tunnel` | `ssh -N -L …` to the host |
 | guest | `com.t3tools.t3code.service` | The T3 server. Installed by `t3 up`, not by this repo |
 | guest | `macos-vms.agent-env` | Exports the Claude token to launchd at login |
 | guest | `macos-vms.agent-chrome` | Starts the shared Chrome if it does not run (at login, then every 30 s) |
+| guest | `macos-vms.voxl` | voxl on port 6901, `KeepAlive` |
+| guest | `macos-vms.prompt-guard` | Answers the Local Network prompt for T3, voxl and Chrome (every 10 s) |
 
 `scripts/launchd.sh` installs a job only when its plist changed. `make up` and
 `make update` are therefore safe to run again: they do not restart a VM that is already
@@ -125,3 +127,18 @@ saves only the rows of the app's sessions (desktop clients, not revoked, not exp
 as SQL and loads them after the new T3 server has started. With the environment ID,
 the keys and those rows, the app treats the new VM as the old one and reconnects
 without a pairing dialog.
+
+## Prompts on an unattended screen
+
+Three kinds of macOS dialogs showed up on fresh VMs, and each has its own fix:
+
+| Dialog | Owner process | Fix |
+| --- | --- | --- |
+| "... would like to record this computer's screen" / control it | `universalAccessAuthWarn` | TCC rows for the program, written before it first starts (`desktop.sh`, `tcc-grant.sh`) |
+| "... is requesting to bypass the system private window picker" | `UserNotificationCenter` (from `replayd`) | A recent `kScreenCaptureApprovalLastUsed`; voxl's start script renews its own at every start |
+| "Allow ... to find devices on local networks?" | `UserNotificationCenter` | `prompt-guard.sh` presses "Allow" with an accessibility action |
+
+A synthetic mouse click (CGEvent) does not reach these dialogs; an accessibility press
+(`AXPress`, through `agent-desktop click <ref>`) does. To find the owner of an unknown
+dialog, list the on-screen windows with `CGWindowListCopyWindowInfo` (a short Swift
+script); `osascript` with System Events can hang on such a screen.

@@ -12,6 +12,9 @@ csrutil status | grep -q disabled || { echo "SIP is on: grant the permissions by
 
 clients=( ~/.t3/runtime/versions/*/t3(N) )
 [ ${#clients[@]} -gt 0 ] || { echo "no T3 runtime found; start the T3 service first" >&2; exit 1; }
+# voxl (make view) captures the screen and sends input as itself: its LaunchAgent
+# runs the binary directly, so the binary is the responsible process.
+[ -x ~/.cargo/bin/voxl ] && clients+=( ~/.cargo/bin/voxl )
 
 for client in "${clients[@]}"; do
   for service in kTCCServiceAccessibility kTCCServiceScreenCapture kTCCServicePostEvent; do
@@ -41,4 +44,6 @@ now="$(date -u '+%Y-%m-%d %H:%M:%S +0000')"
 for client in "${clients[@]}" ${agent:+"$agent"}; do
   defaults write "$approvals" "$client" -dict-add kScreenCaptureApprovalLastUsed -date "$now"
 done
+# voxl may have started before it had the permissions: restart it with them.
+launchctl kickstart -k "gui/$(id -u)/macos-vms.voxl" 2>/dev/null || true
 echo "screen capture alert off for: ${(j:, :)${clients[@]/#$HOME/~}}${agent:+, $agent}"

@@ -51,9 +51,10 @@ forward() { # NAME HOST_PORT GUEST_PORT
 </dict></plist>
 PLIST
 }
-log "Forwarding ports on $VM_HOST: 127.0.0.1:$(t3_local_port "$n") -> T3, 127.0.0.1:$(vnc_local_port "$n") -> Screen Sharing"
-forward t3  "$(t3_local_port "$n")"  "$T3_PORT"
-forward vnc "$(vnc_local_port "$n")" "$VNC_PORT"
+log "Forwarding ports on $VM_HOST: 127.0.0.1:$(t3_local_port "$n") -> T3, :$(voxl_local_port "$n") -> voxl, :$(vnc_local_port "$n") -> Screen Sharing"
+forward t3   "$(t3_local_port "$n")"   "$T3_PORT"
+forward voxl "$(voxl_local_port "$n")" "$VOXL_PORT"
+forward vnc  "$(vnc_local_port "$n")"  "$VNC_PORT"
 
 log "Waiting for $vm"
 vm_wait "$vm"

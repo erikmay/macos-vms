@@ -17,6 +17,9 @@ vm_wait "$build"
 
 "$ROOT/scripts/provision.sh" "$build"
 
+# The voxl password is made at the first start of every VM; clones must not share one.
+guest "$build" 'rm -f ~/.config/voxl/password'
+
 log "Saving as $GOLDEN_IMAGE"
 host "$TART stop $build && { $TART delete $GOLDEN_IMAGE 2>/dev/null || true; } && $TART rename $build $GOLDEN_IMAGE"
 log "Done. Create VMs with: make up N=1"

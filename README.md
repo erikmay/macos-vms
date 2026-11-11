@@ -12,7 +12,7 @@ one in about a minute, still logged in to Claude Code, Codex and the T3 Code app
  your Mac (client)                 host Mac (Apple Silicon)                VM  mac-vm1, mac-vm2
 ┌────────────────────┐  SSH tunnel ┌─────────────────────────┐  Softnet   ┌─────────────────────────────┐
 │ T3 Code desktop app├────────────▶│ 127.0.0.1:1377N  socat  ├───────────▶│ T3 server             :3773 │
-│ Screen Sharing     ├────────────▶│ 127.0.0.1:1590N  socat  ├───────────▶│ Screen Sharing        :5900 │
+│ browser (voxl)     ├────────────▶│ 127.0.0.1:1690N  socat  ├───────────▶│ voxl screen stream    :6901 │
 └────────────────────┘             │                         │            │ Claude Code, Codex          │
                                    │ Tart, launchd           │            │ Chrome (CDP), agent-browser │
                                    └─────────────────────────┘            │ agent-desktop               │
@@ -31,8 +31,9 @@ one in about a minute, still logged in to Claude Code, Codex and the T3 Code app
   [agent-browser](https://github.com/vercel-labs/agent-browser) attached to it.
 - **Computer use.** [agent-desktop](https://github.com/vercel-labs/agent-desktop) drives
   macOS apps through the accessibility tree. The privacy permissions are granted by script.
-- **You can watch.** `make view` opens every VM in macOS Screen Sharing, side by side.
-  You see each agent's Chrome and desktop and can take over.
+- **You can watch.** `make view` shows every VM side by side in one browser page,
+  streamed by [voxl](https://github.com/tembo/voxl). You see each agent's Chrome and
+  desktop and can take over with mouse and keyboard.
 - **Network isolation.** With [Softnet](https://github.com/cirruslabs/softnet), a VM
   reaches the internet but not your LAN, your VPN or the other VM.
 - **It stays up.** launchd starts the VMs, the T3 servers, Chrome and the tunnel again
@@ -94,7 +95,8 @@ Run `make` to see this list. `N` is the VM number, 1 or 2.
 | `make token` | Store the token from `claude setup-token` in your Keychain |
 | `make auth N=1` | Log in Claude Code and Codex in the VM (`auth-claude`, `auth-codex` do one each) |
 | `make status` | VMs, T3 reachability, tool versions, logins |
-| `make view` | Screen Sharing for all VMs, windows tiled side by side. `make view N=1` opens one VM |
+| `make view` | All VMs side by side in the browser (voxl). `make view N=1` shows one VM |
+| `make vnc` | The same in macOS Screen Sharing (login `admin` / `admin`), as a fallback |
 | `make pair N=1` | Pair the app again. T3 sessions expire after 30 days |
 | `make tunnel` | Reinstall the SSH tunnel on your Mac |
 | `make update N=1` | Update tools and settings in the VM in place. Logins and data stay |
@@ -116,7 +118,8 @@ git ignores.
 | `BASE_IMAGE` | `ghcr.io/cirruslabs/macos-tahoe-base:latest` | The image that the golden image starts from |
 | `T3_VERSION` | `0.1.8` | T3 server version in the VMs. Keep it equal to your desktop app |
 | `TART_RUN_FLAGS` | `--no-graphics --net-softnet` | How Tart runs a VM. Remove `--net-softnet` to give VMs access to private networks |
-| `T3_LOCAL_PORT_BASE`, `VNC_LOCAL_PORT_BASE` | `13770`, `15900` | Loopback ports on your Mac: VM N uses base + N |
+| `T3_LOCAL_PORT_BASE`, `VOXL_LOCAL_PORT_BASE`, `VNC_LOCAL_PORT_BASE` | `13770`, `16900`, `15900` | Loopback ports on your Mac: VM N uses base + N |
+| `VOXL_VERSION` | `0.3.4` | voxl version, built from crates.io in the image |
 
 The agent settings that go into every VM are in [`guest/config/`](guest/config):
 Claude Code adds no co-author line to commits and loads no claude.ai connectors, and
@@ -192,6 +195,31 @@ desktop to macOS:
   `~/.claude/skills`. They tell the agent to load the guide that each CLI prints, so the
   instructions always match the installed version.
 
+### Watching: voxl
+
+[voxl](https://github.com/tembo/voxl) runs in each VM as a LaunchAgent and streams the
+screen as H.264 over one WebSocket; the browser decodes it with WebCodecs. Each VM makes
+its own random password at its first start (`~/.config/voxl/password`). `make view` reads
+the passwords and writes a page with one pane per VM to
+`~/Library/Caches/macos-vms/view.html` (mode 600), then opens it. Each pane has a button
+to maximize it; a hidden pane disconnects, so voxl encodes nothing for it.
+
+voxl is built from crates.io inside the image (`cargo install voxl-server`, about two
+minutes). Its code is MIT, but the binary links x264 and is therefore GPL-2.0.
+
+### No prompts on the VM screen
+
+Nobody sits at a VM, so the setup keeps macOS dialogs away:
+
+- The privacy permissions (Accessibility, Screen Recording) for the T3 runtime and voxl
+  are written into the TCC database before the programs start.
+- The "bypass the system private window picker" alert is prevented by a recent
+  approval date in replayd's file (see [docs/design.md](docs/design.md)).
+- A LaunchAgent (`macos-vms.prompt-guard`) checks every 10 seconds for macOS's
+  "Allow … to find devices on local networks?" prompt and answers "Allow", only for T3,
+  voxl and Google Chrome, through the accessibility API. It needs the Accessibility
+  permission for the `agent-desktop` binary.
+
 ## How it works
 
 The interesting parts are the problems that the scripts solve. The details are in
@@ -219,8 +247,8 @@ Read this before you give an agent full access.
   The scripts use this: they write the privacy permissions into the TCC database.
 - **What limits access to a VM:** it has no route from your LAN (Softnet), SSH password
   login is off, the forwarders listen on the host's loopback only, and T3 needs a pairing
-  code. Screen Sharing still accepts `admin` / `admin`, but only through the host's
-  loopback, so through your SSH login.
+  code. voxl needs its own password per VM. Screen Sharing still accepts `admin` / `admin`,
+  but only through the host's loopback, so through your SSH login.
 - **Softnet runs as SUID root** on the host. That is how Cirrus Labs designed it.
 - Do not add `--net-softnet-expose` to `TART_RUN_FLAGS`. It also opens the port on the
   host's LAN address.
@@ -251,6 +279,7 @@ T3 Code is in beta. `t3 up`, `t3 pair` and the `t3code://pair` link can change.
   by Cirrus Labs. Tart has its own license. Read it before you use it in an organization.
 - [tobi/wrapvm](https://github.com/tobi/wrapvm) for the shared Chrome, the skills and the
   idea that a person can watch.
+- [voxl](https://github.com/tembo/voxl) by Tembo for the screen stream.
 - [BergQuester/XcodeCellmate](https://github.com/BergQuester/XcodeCellmate) and
   [Running AI agents in isolated macOS VMs](https://blog.gertjvr.com/articles/2026/08/running-ai-agents-in-isolated-macos-vms/)
   for the golden-image pattern with Tart.

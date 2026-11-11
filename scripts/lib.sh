@@ -18,6 +18,7 @@ if [ -f "$ROOT/config.local.env" ]; then . "$ROOT/config.local.env"; fi
   LAUNCHD_PREFIX=macos-vms   # launchd labels on the host and the client; the guest scripts use the same
   T3_PORT=3773               # T3 server port inside a VM
   VNC_PORT=5900              # Screen Sharing port inside a VM
+  VOXL_PORT=6901             # voxl port inside a VM
 }
 # shellcheck disable=SC2016  # expanded by the host's shell, not here
 TART='"$HOME/bin/tart"'      # installed by `make host`
@@ -42,6 +43,7 @@ vm_name() {
 }
 t3_local_port()  { echo $((T3_LOCAL_PORT_BASE + $1)); }
 vnc_local_port() { echo $((VNC_LOCAL_PORT_BASE + $1)); }
+voxl_local_port() { echo $((VOXL_LOCAL_PORT_BASE + $1)); }
 
 # Run a shell command line on the host.
 host() {

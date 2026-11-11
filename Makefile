@@ -9,7 +9,7 @@ export TIMING_T0
 S := ./scripts
 
 .DEFAULT_GOAL := help
-.PHONY: help host image up auth token auth-claude auth-codex status view pair tunnel \
+.PHONY: help host image up auth token auth-claude auth-codex status view vnc pair tunnel \
         update start stop reset delete forget bench lint
 
 help: ## Show this list
@@ -45,8 +45,11 @@ auth-codex: ## Codex device login in VM N (you approve a code in the browser)
 status: ## Show VMs, T3 reachability, tool versions and logins
 	$(S)/status.sh
 
-view: ## Open Screen Sharing for all VMs side by side, or for VM N only
+view: ## Show all VMs side by side in the browser (voxl), or VM N only
 	$(S)/view.sh $(N)
+
+vnc: ## Open Screen Sharing for all VMs, or VM N only (fallback to view)
+	$(S)/vnc.sh $(N)
 
 pair: ## Pair the T3 Code app with VM N again (sessions expire)
 	$(S)/pair.sh $(N)

@@ -15,5 +15,5 @@ guest_script "$vm" \
   "$(base64 < "$ROOT/guest/config/codex-config.toml" | tr -d '\n')" \
   < "$ROOT/guest/agent-config.sh"
 
-log "Browser and computer use in $vm"
-guest_script "$vm" < "$ROOT/guest/desktop.sh"
+log "Browser and computer use, voxl $VOXL_VERSION in $vm"
+guest_script "$vm" "$VOXL_VERSION" < "$ROOT/guest/desktop.sh"
